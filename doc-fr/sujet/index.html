@@ -1,0 +1,212 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>Projet Systèmes d'exploitation</title>
+    <style type="text/css">
+      BODY {
+      background-color: white;
+      color: black;
+      margin: 3em;
+      }
+      H1, H2, H3, H4, H5, H6 {
+      font-family: sans-serif;
+      }
+      H1 {
+      text-align: center;
+      }
+      PRE {
+      margin-left: 5ex;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Projet Systèmes d'exploitation</h1>
+
+    <h2>Sujet</h2>
+
+    <p>(Cette partie ne concerne que les IUP GMI 2<sup>e</sup> année. 
+    Les étudiants de licence peuvent consulter <a
+    href="https://dpt-info.u-strasbg.fr/~mathis/Systeme/Licence/tp.html">https://dpt-info.u-strasbg.fr/~mathis/Systeme/Licence/tp.html</a>.)</p>
+
+    <p>Ce projet consiste à écrire un mini-shell intéractif. Il s'agit
+    donc d'un programme qui affiche un prompt, attend les commandes de
+    la part de l'utilisateur puis lance le traitement approprié. Le
+    mini-shell agit de la sorte en boucle jusqu'à saisir exit ou
+    recevoir la fin de fichier <tt>Ctrl-d</tt>.</p>
+
+    <p>Ce mini-shell devra traiter&nbsp;:</p>
+
+    <ul>
+
+      <li>les redirections : <tt>&gt;</tt> <tt>&lt;</tt>
+      <tt>&gt;&gt;</tt> <tt>2&gt;</tt> etc.</li>
+
+      <li>les tubes : <tt>|</tt></li>
+
+      <li>les commandes conditionnelles : <tt>&&</tt> <tt>||</tt></li>
+
+      <li>la mise en arrière plan : <tt>&amp;</tt></li>
+
+      <li>les signaux <tt>Ctrl-c</tt>, <tt>Ctrl-\</tt> qui devront
+      être gérés (et ne pas tuer le mini-shell)</li>
+
+      <li>les commandes internes : <tt>cd</tt>, <tt>kill</tt>,
+      <tt>exit</tt>, <tt>history</tt> (voir plus loin)</li>
+
+    </ul>
+
+    <p>Par ailleurs, les shells partageront un historique qui sera
+    placé dans un segment de mémoire partagée et sauvegardé dans un
+    fichier <tt>$HOME/.history</tt>. Ce fichier sera ouvert par le
+    premier shell lancé et mis à jour lors de la fermeture du dernier
+    shell. Une commande interne history affichera cet historique. Il
+    est possible d'utiliser les commandes conservées dans l'historique
+    de la façon suivante&nbsp;:</p>
+
+    <ul>
+
+      <li><tt>!num</tt> : rappel de la commande de numéro <tt>num</tt>
+      (donné par la commande history qui précéde l'affichage de chaque
+      commande par un numéro)</li>
+
+      <li><tt>!!</tt> : rappel de la dernière commande</li>
+
+      <li><tt>!abc...</tt> : rappel de la dernière commande commençant
+      par abc...</li>
+
+    </ul>
+
+    <p>Pour faciliter votre travail, vous trouverez un parser de
+    commandes ainsi que des explications sur son fonctionnement à la
+    page <a
+    href="https://dpt-info.u-strasbg.fr/~alain/systeme/">https://dpt-info.u-strasbg.fr/~alain/systeme/</a>. 
+    Précisons qu'il n'est pas anormal que vous passiez un peu de temps
+    à maitriser ce parser. Le temps ainsi consacré devrait être bien
+    inférieur à celui qu'il vous faudrait pour réaliser votre propre
+    analyseur de commandes.</p>
+
+    <p>Ce projet peut être effectué en binôme. Il donnera lieu à la
+    rédaction d'un rapport (voici quelques <a
+    href="rapport.html">indications</a>). Vous devrez également
+    transmettre à votre responsable de TD un fichier
+    (<tt>.tar.gz</tt>) contenant votre code.</p>
+
+    <p>La date limite pour rendre rapport et code est fixée au 14
+    janvier 2005. Cette date est impérative.</p>
+
+    <hr>
+
+    <h2>Aide</h2>
+
+    <p>Voici les document disponibles actuellement pour votre
+    projet&nbsp;:</p>
+
+    <ul>
+
+      <li><p>Une description de la <a href="syntaxe.html">syntaxe</a>
+      des commandes du shell. Ce document est important parce qu'il
+      définit le vocabulaire.</p></li>
+
+      <li><p>Une description de la <a
+      href="bibliotheque.html">bibliothèque</a> disponible pour vous
+      aider.</p></li>
+
+      <li><p>Une archive contenant tout ce qu'il faut pour installer
+      la bibliothèque. Notez que vous avez besoin des outils
+      <tt>flex</tt> et <tt>bison</tt>. Il faut aussi avoir
+      <tt>make</tt>, et si possible <tt>gmake</tt>.</p>
+
+        <p>Version courante&nbsp;: <a
+        href="chelle-1.tar.gz">chelle-1.tar.gz</a></p>
+
+        <p>Attention, l'archive contient un répertoire
+        <tt>chelle-<i>version</i></tt> et deux sous-répertoires, appelés
+        <tt>lib/</tt> et <tt>exemple/</tt>. Seul le premier est
+        indispensable. Lorsque vous avez obtenu cette archive, il vous
+        suffit de passer les commandes suivantes&nbsp;:</p>
+
+        <pre>tar xvfz chelle-<i>version</i>.tar.gz
+make -C chelle-<i>version</i>/lib</pre>
+
+        <p>Si vous voulez tester l'exemple&nbsp;:</p>
+
+        <pre>cd chelle-<i>version</i>/exemple
+make</pre>
+
+        <p>Le programme de test s'appelle <tt>chelle</tt>. Il lit les
+        commandes que vous tapez, et affiche la structure de données
+        correspondante.</p>
+
+        <p><strong>Attention&nbsp;:</strong> si vous êtes sous linux,
+        vous pouvez utiliser directement le makefile fourni dans
+        <tt>exemple/</tt>. Si vous êtes sous un autre système (par
+        exemple sur <tt>ada</tt>), il faudra ajouter un <tt>#</tt>
+        devant la ligne <tt>CFLAGS+=...</tt> dans le makefile. Ce sera
+        modifié dans une autre version.</p>
+
+        <p><strong>Attention&nbsp;:</strong> n'écrivez aucun code dans
+        le répertoire <tt>chelle-<i>version</i></tt> créé par
+        extraction de l'archive. L'analyseur de commandes contient
+        probablement des erreurs, et il risque d'y avoir de nouvelles
+        versions de temps en temps. Utilisez une structure de
+        répertoire telle que&nbsp;:</p>
+
+        <pre>chelle-<i>version</i>/
+    lib/
+        commande.h
+        libchelle.a
+        ...
+    exemple/
+        chelle.c
+        ...
+crustace/
+    votrecode1.c
+    votrecode2.c
+    ....</pre>
+
+        <p>Le répertoire de développement s'appelle <tt>crustace</tt>
+        ici. (Shell signifie coquillage en anglais.) Ce n'est qu'un
+        exemple.</p>
+
+        <p>Supposons que <tt>REPCHELLE</tt> soit le chemin complet du
+        répertoire crée par l'extraction de l'archive. Pour compiler
+        vos programmes&nbsp;:</p>
+
+        <pre>gcc -W -Wall -I<i>REPCHELLE</i>/lib -c <i>code</i>.c</pre>
+
+        <p>Pour l'édition de liens&nbsp;:</p>
+
+        <pre>gcc -L<i>REPCHELLE</i>/lib <i>code1.o</i> <i>code2.o</i> ... -lchelle -o <i>executable</i></pre>
+
+        <p>(Il est important que le paramètre <tt>-lchelle</tt>
+        apparaisse après les fichiers <tt>.o</tt>, sinon cela ne
+        fonctionnera pas.)</p>
+
+        <p>Nous vous recommandons d'écrire un fichier
+        <tt>makefile</tt> et de conserver le répertoire de la
+        bibliothèque dans une variable.</p>
+
+      </li>
+
+      <li><p>Versions disponibles&nbsp;:</p>
+
+        <ul>
+          <!--@versionsdisponibles@-->
+<li><p><a href="chelle-1.tar.gz">chelle-1.tar.gz</a> (2004-12-09T09:45+0100)</p></li>
+        </ul>
+
+      </li>
+
+
+
+    </ul>
+
+    <hr>
+    <address><a href="mailto:alain@dpt-info.u-strasbg.fr">Alain Ketterlin</a></address>
+<!-- Created: Fri Dec  3 21:32:47 CET 2004 -->
+<!-- hhmts start -->
+Last modified: Mon Jan  3 10:43:35 CET 2005
+<!-- hhmts end -->
+  </body>
+</html>

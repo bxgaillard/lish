@@ -1,0 +1,313 @@
+\NeedsTeXFormat{LaTeX2e}
+
+\documentclass[a4paper,12pt,oneside]{article}
+\usepackage[latin1]{inputenc}
+\usepackage[french]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{ae,aecompl,aeguill}
+\usepackage{geometry}
+\usepackage{graphicx}
+
+\newcommand{\file}[1]{\textsf{#1}}
+\newcommand{\func}[1]{\texttt{#1}}
+\newcommand{\var}[1]{\textit{\texttt{#1}}}
+\newcommand{\type}[1]{\textit{\textsl{#1}}}
+
+\newcommand{\lish}{\textsc{Lish}}
+
+\newcommand{\bs}{\ensuremath{\backslash}}
+
+\begin{document}
+
+\setlength{\parskip}{.5 \baselineskip}
+
+{\noindent\small
+\begin{tabular}[t t]{@{} p{.5 \textwidth} @{} p{.5 \textwidth} @{}}
+  \begin{minipage}[t]{.5 \textwidth}
+    Benjamin~\textsc{Gaillard}
+  \end{minipage}
+  &
+  \begin{minipage}[t]{.5 \textwidth}
+    \begin{flushright}
+      IUP GMI 2\ieme{} année\\
+      2004/2005
+    \end{flushright}
+  \end{minipage}
+\end{tabular}
+}
+
+\bigskip
+
+\begin{center}
+\sc\LARGE
+Projet de Systèmes d'Exploitation :\\
+Mini-Shell Interactif\\
+\rule[5pt]{.5\textwidth}{2pt}\\
+Rapport
+\end{center}
+\vspace*{1cm}
+
+\section*{Introduction}
+
+\lish{} (\emph{Lightweight Interactive SHell}) est un interpréteur de
+commandes de type \emph{Bash}. Il dispose de la même syntaxe pour les
+commandes, et essaye d'imiter au maximum son comportement. Bien entendu, étant
+un petit programme, il ne possède de loin pas toutes les fonctionnalités de
+\emph{Bash}, mais est tout-à-fait fonctionnel en tant que simple intérpréteur
+de commandes avec quelques fonctionnalités supplémentaires. Il gère les
+redirections de fichiers et de descripteurs, les pipelines et les commandes
+conditionnelles de la même manière que \emph{Bash}.
+
+\section*{Exécution des commandes}
+
+\subsection*{Prototypes}
+
+\paragraph{Note} Les noms des types de données ont été modifiés. Ils ont été
+traduits en anglais, ne contiennent plus de majuscule et finissent tous par
+\og\type{\_t}\fg.
+
+\noindent\texttt{%
+\type{int}~~~\func{exec\_command}(\type{command\_t}~*\var{command})\verb!;!\\
+\type{int}~~~\func{exec\_sequence}(\type{sequence\_t}~*\var{sequence})%
+  \verb!;!\\
+\type{int}~~~\func{exec\_conditional}(\type{conditional\_t}~*%
+  \var{conditional})\verb!;!\\
+\type{int}~~~\func{exec\_pipeline}(\type{pipeline\_t}~*\var{pipeline})%
+  \verb!;!\\
+\type{pid\_t}~\func{exec\_redirected}(\type{redirected\_t}~*\var{redirected})%
+  \verb!;!\\
+\type{pid\_t}~\func{exec\_simple}(\type{simple\_t}~*\var{simple})\verb!;!
+}
+
+\subsection*{Commande}
+
+L'exécution d'une commande, c'est-à-dire d'une séquence complète, est assurée
+par la fonction \func{exec\_command}. En fait, elle ne fait qu'appeler
+\func{exec\_sequence} avec comme paramètre la première partie de la séquence.
+
+\subsection*{Séquence}
+
+La fonction \func{exec\_sequence} s'occupe de cette tâche. Une séquence étant
+une liste chaînée d'éléments de type \type{sequence\_t}, elle les passe en
+revue l'un après l'autre dans une boucle, et appelle la fonction
+\func{exec\_conditional} avec leur champ \var{conditional} en paramètre.
+
+Pour les conditionnelles en séquence, l'appel est direct ; pour celles en
+arrière-plan, l'exécution est faite dans un \emph{fork} du processus. Un pipe
+est également créé avec \func{pipe}. Son entrée remplacera l'entrée standard
+dans le fils, et sa sortie sera fermée. Dans le père, les deux descripteurs de
+fichier du pipe sont fermés. Cela permet à la commande s'exécutant en
+arrière-plan de ne pas lire l'entrée standard du shell : il recevra tout de
+suite une fin de fichier.
+
+\subsection*{Commande conditionnelle}
+
+De même que pour la fonction précédente, \func{exec\_conditional} est appelée
+avec la tête de la liste chaînée de \type{conditional\_t}. Elle exécute,
+c'est-à-dire appelle \func{exec\_pipeline} sur le membre \var{pipeline} de
+chaque élément de la liste, si le code de retour de l'appel précédent est
+compatible avec l'opération demandée (AND ou OR) (sauf, bien sûr, dans le cas
+du premier pipeline qui est toujours exécuté).
+
+\subsection*{Pipeline}
+
+Comme précédemment, la fonction \func{exec\_pipeline} reçoit en argument la
+tête de la liste des commandes redirigées formant le pipeline. Si une seule
+commande est présente, dans ce cas, elle est exécutée directement au moyen de
+\func{exec\_redirected}. Sinon, chaque commande est exécutée avec la même
+fonction, mais dans un \emph{fork} du processus courant et avec les
+descripteurs d'entrée et de sortie standard modifiés.
+
+À chaque commande, de la première à l'avant-dernière, est créé un pipe avec
+la fonction \func{pipe}. L'entrée de ce pipe est gardé en réserve pour la
+commande redirigée suivante, et la sortie du pipe remplace la sortie standard
+courante. L'entrée standard est remplacée par l'entrée du pipe créé pour la
+précédente commande redirigée, exception faite de la première commande qui
+utilise l'entrée standard du shell. De la même manière, la sortie standard de
+la dernière commande redirigée du pipeline est la même que celle du shell.
+
+\subsection*{Commande redirigée}
+
+La fonction \func{exec\_redirected} parcourt la liste des redirections
+associées à la commande redirigée passée en paramètre. Suivant le type de
+redirection, elle effectue différentes actions :
+\begin{itemize}
+  \item c'est une redirection de fichier : dans ce cas, le fichier est ouvert
+    dans le mode spécifié par la redirection. Le nouveau descripteur est copié
+    et remplace l'ancien descripteur (également spécifié par la redirection)
+    s'il existe, puis est fermé ;
+  \item c'est une redirection de descripteur : le mode du descripteur source
+    est d'abord vérifié, puis le descripteur est copié dans le descripteur
+    destination, le remplaçant s'il existe ; enfin, le descripteur source est
+    fermé si spécifié par la redirection.
+\end{itemize}
+Finalement, une fois ces redirection effectuées, la commande est exécutée. Au
+retour, les descripteurs créés sont fermés ; l'entrée standard et les sorties
+standard et d'erreur sont restaurées. Cela est fait car il se peut que la
+commande ne sont pas exécutée dans un \emph{fork}. C'est \func{exec\_simple}
+qui se charge de l'exécution de la commande simple.
+
+\subsection*{Commande simple}
+
+C'est la fonction \func{exec\_simple} qui gère les commandes simples. Les
+descripteurs ont déjà été mis en place par les fonctions précédentes. Il ne
+reste donc plus qu'à passer à l'exécution elle-même. Tout d'abord, la fonction
+transfore la liste chaînée de \type{words\_t} en tableau de type \var{argv},
+comme utilisée dans les fonctions \func{main}. Puis, elle teste si cette
+commande est interne en tentant de l'exécuter au moyen de la fonction
+\func{exec\_internal}.
+
+Sinon, elle appelle \func{fork} et utilise \func{execvp} pour remplacer le
+processus fils par celui de la commande. Dans le cas d'un sous-shell, le
+\emph{fork} est également effectué, mais le fils appelle \func{exec\_sequence}
+pour exécuter la commande complète du sous-shell. Dans les deux cas, le
+processus père attend la fin de l'exécution du fils avec \func{wait}.
+
+\paragraph{Remarque} Les paramètres commençant par \og\verb!$!\fg{} sont
+remplacés par les variablse d'environnement correspondantes.
+
+\subsection*{Commandes internes}
+
+Les commandes internes sont exécutées via \func{exec\_internal}. Cette
+fonction est appelée avant toute tentative de \emph{fork} puis appel
+d'\func{execvp} pour tester si une commande est déjà disponible en interne. Si
+c'est le cas, elle est directement exécutée dans le processus courant, ce qui
+facilite grandement les commandes telles que \func{cd}, \func{exit}, etc.
+Certaines commandes supplémentaires, non présentes dans le sujet, ont été
+implémentées. Voir plus pas pour plus d'informations.
+
+\subsection*{Schéma récapitulatif}
+
+\begin{center}
+  \framebox{\includegraphics{schema}}
+\end{center}
+
+\section*{Gestion des signaux}
+
+\lish{} intercepte et gère cinq signaux. Nous allons voir en qui ils
+consistent, et de quelle manière leur gestion est implémentée.
+
+\subsection*{Terminaison : SIGTERM}
+
+Le signal SIGTERM sert à terminer un processus de façon normale. C'est la
+méthode standard pour mettre fin à l'exécution d'un processus, c'est aussi le
+signal envoyé par la commande \func{kill} par défaut. En fait, ce signal est
+tout simplement ignoré, comme le fait \emph{Bash}. Cela permet de ne pas
+fermer le shell en exécutant la commande \og\func{kill 0}\fg.
+
+\subsection*{Terminaison d'un fils : SIGCHLD}
+
+Lorsque ce signal arrive, cela veut dire qu'un processus fils s'est terminé.
+\lish{} récupère alors son code de retour avec \func{wait} pour qu'il ne
+devienne pas un processus zombie, et affiche sur la console le PID du
+processus ainsi que son code de retour. Pour les fils ayant été stoppés
+(c'est-à-dire ayant reçu le signat SIGTSTP), le signal SIGCONT leur est tout
+de suite envoyé afin qu'ils soient mis en arrière-plan.
+
+\subsection*{Interruptions : SIGINT, SIGQUIT, SIGTSTP}
+
+Ces trois signaux sont ignorés par \lish{} mais transmis à tous les fils en
+cours d'exécution (ceux qui sont en premier plan uniquement). SIGINT permet
+d'interrompre le processus (déclenchable par Ctrl+C), SIGQUIT de le terminer
+(Ctrl+\bs) et SIGTSTP de le mettre en pause (Ctrl+Z). Sur le système où le
+shell a été développé (\emph{Linux}), ces signaux étaient transmis
+automatiquement, mais dans l'éventualité où ils ne le seraient pas sur un
+autre système, le gestionnaire de signal les transmet tout de même aux fils
+actifs au premier plan.
+
+La liste des processus auxquels envoyer le signal est connue grâce à la
+fonction \func{exec\_pipeline} qui crée et remplit un tableau des processus de
+premier plan en cours d'exécution.
+
+\section*{Historique}
+
+L'historique de \lish{} est stocké en mémoire partagée et utilise des
+sémaphores pour contrôler l'accès à cette mémoire. Nous allons voir comment
+chacun d'eux intervient dans ce but.
+
+\subsection*{Mémoire partagée}
+
+Un segment de mémoire partagée est obtenu avec \func{shmget} et \func{shmat}.
+Il est partagé par tous les processus en cours d'exécution par l'utilisateur.
+Sa clé est dépendante de l'UID de l'utilisateur, ce qui permet à plusieurs
+shells de s'exécuter sous plusieurs identités différentes. Le nombre
+d'attachements à ce segment de mémoire partagée (obtenu avec \func{shmctl})
+sert à savoir si le shell courant est le premier (ou le dernier) à être
+exécuté. S'il est le premier, il initialise la mémoire partagée et charge
+l'historique depuis le fichier \file{$\sim$/.history}. S'il est le dernier, il
+sauvegarde l'historique et détruit le segment de mémoire partagée.
+
+Le segment de mémoire partagée ne contient qu'une structure, formée par un
+tableau de lignes de commandes, ainsi que de 3 variables permettant de
+connaitre la position de la dernière commande tapée, de la plus ancienne et le
+décalage par rapport à la toute première commande tapée. Chaque accès au
+segment est protégé par deux sémaphores.
+
+\subsection*{Sémaphores}
+
+Les sémaphores permettent de garantir qu'un seul processus à la fois a accès
+au segment de mémoire partagée. Ils sont au nombre de deux : un pour la
+lecture et un pour l'écriture.
+
+Ils sont créés au début de l'exécution du programme : d'abord de manière
+exclusive, pour s'assurer qu'aucune autre instance du shell n'est en cours
+d'exécution (si cela réussit, alors il faut initialiser les sémaphores),
+ensuite de manière normale. Cela se fait au travers de la fonction
+\func{semget} (\func{semctl} pour l'initialisation et la destruction). La
+fonction \func{semop} servira à effectuer les opérations suivantes sur les
+sémaphores.
+
+Pour qu'un processus aît accès en lecture à la mémoire partagée, il ne faut
+qu'aucun autre processus soit en train d'y écrire. Lorsque c'est le cas, le
+processus se rajoute dans le sémaphore de lecture. Dès qu'il a terminé son
+travail, il se retire du sémaphore.
+
+Afin qu'un processus gagne le droit d'écrire dans la mémoire partagée, il est
+impératif qu'aucun autre processs soit en train de lire ou d'écrire dans la
+mémoire partagée. Quand ces deux conditions sont réunies, le processus se
+rajoute dans le sémaphore d'écriture et s'en retire une fois son travail
+accompli.
+
+\section*{Fonctionnalités supplémentaires}
+
+\lish{} dispose de quelques fonctionnalités supplémentaires, non incluses dans
+le sujet. En voici une description.
+
+\subsection*{Commandes supplémentaires}
+
+En sus des commandes \func{cd}, \func{kill}, \func{exit} et \func{history}
+sont gérées les commandes \func{echo}, \func{exec} et \func{export}. Voici
+une description de ces commandes :
+\begin{itemize}
+  \item \func{cd [répertoire]} : change de répertoire courant ;
+  \item \func{kill [-signal | -l] [PID\dots]} : envoie un signal à un
+    processus ;
+  \item \func{exit [code]} : quitte le shell en renvoyant un code d'erreur ;
+  \item \func{history [-c]} : affiche/vide l'historique ;
+  \item \func{echo [arg\dots]} : affiche les arguments ;
+  \item \func{exec commande} : exécute la commande en remplaçant le shell ;
+  \item \func{export [clé=valeur\dots]} : définit une variable
+    d'environnement.
+\end{itemize}
+
+\paragraph{Remarque} La commande \func{cd} met à jour la variable
+d'environnement \var{PWD} correspondante.
+
+\subsection*{Affichage de l'invite}
+
+L'invite est basée sur la variable d'environnement \var{PS1} : la plupart
+des codes utilisés par \emph{Bash} sont compatibles. Par défaut, si cette
+variable n'est pas définie, le shell affiche son nom suivi du caractère
+\og\verb!#!\fg{} si l'utilisateur est root, \og\verb!$!\fg{} sinon.
+
+En lançant \lish{} avec le paramètre \func{-s} ou \func{-{}-sexy}, l'invite
+par défaut est remplacée par une autre invite, affichant plusieurs
+informations, le tout avec de la couleur.
+
+\section*{Conclusion}
+
+\lish{} est un petit shell assez complet. Il nous a permis de faire le tour
+des principales commandes système d'Unix, et a été une excellente manière de
+nous faire apprendre cette partie des systèmes d'exploitation par la pratique.
+
+\end{document}

@@ -1,0 +1,390 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>Syntaxe du mini-shell</title>
+    <style type="text/css">
+      BODY {
+      background-color: white;
+      color: black;
+      margin: 3em;
+      }
+      H1, H2, H3, H4, H5, H6 {
+      font-family: sans-serif;
+      }
+      H1 {
+      text-align: center;
+      }
+      SPAN.char {
+      font-family: monospace;
+      font-weight: bold;
+      }
+      SPAN.def {
+      font-weight: bold;
+      font-style: italic;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Commandes du mini-shell</h1>
+
+    <h2>Vocabulaire</h2>
+
+    <p>On distingue différents éléments dans une commande complète.
+    Avant de pouvoir les étudier dans le détail, il nous faut définir
+    le vocabulaire employe dans la suite. Une commande complète peut
+    être assez compliquée, c'est pourquoi nous détaillons ici les
+    différents composants.</p>
+
+    <dl>
+
+
+      <dt>Une <span class="def">liste de mots</span></dt>
+
+      <dd><p>C'est la forme la plus simple de commande. Elle est
+      simplement constituée d'une suite de mots séparés par des
+      blancs. Chaque peut être constitué de caractères non blancs
+      quelconques à l'exclusion des caractères <span
+      class="char">|&amp;&gt;&lt;;()</span> parce que ces caractères
+      ont un sens spécial. Si un de ces caractères est nécessaire, il
+      doit être précéde d'une contre-oblique
+      (<em>backslash</em>).</p></dd>
+
+      <dt>Une <span class="def">commande simple</span></dt>
+
+      <dd><p>Il n'y a que deux formes de commandes simples&nbsp;:</p>
+
+        <ol>
+
+          <li><p>Une liste de mots, par exemple&nbsp;:</p>
+
+            <pre>ls -l</pre>
+
+          </li>
+
+          <li><p>Une commande complète placée entre
+          parenthèses, par exemple&nbsp;:</p>
+
+            <pre>( cd .. ; cp -r . /backup )</pre>
+
+          </li>
+
+        </ol>
+
+      </dd>
+
+
+      <dt>Une <span class="def">commande redirigé</span></dt>
+
+      <dd><p>Il s'agit d'une commande simple, suivie d'un nombre
+      quelconque de redirections. Une <span
+      class="def">redirection</span> peut prendre plusieurs formes
+      différentes&nbsp;:</p>
+
+        <ul>
+
+          <li><p>Une redirection en lecture vers un fichier, de la
+          forme&nbsp;:</p>
+
+            <pre><i>numero</i>&lt; fichier</pre>
+
+            <p>Le numéro de descripteur est optionnel (par défaut il
+            vaut 0, c'est-à-dire l'entrée standard). Il n'y a pas
+            d'espace entre le numéro et le signe <tt>&lt;</tt>.</p>
+
+          </li>
+
+          <li><p>Un redirection en écriture vers un fichier, de la
+          forme&nbsp;:</p>
+
+            <pre><i>numero</i>&gt; fichier</pre>
+
+            <p>Le numéro de descripteur est optionnel (par défaut il
+            vaut 1, c'est-à-dire la sortie standard).</p>
+
+          </li>
+
+          <li><p>Une redirection en mode <em>append</em> vers un
+          fichier, de la forme&nbsp;:</p>
+
+            <pre><i>numero</i>&gt;&gt; fichier</pre>
+
+            <p>Le numéro de descripteur est optionnel (par défaut il
+            vaut 1, c'est-à-dire la sortie standard).</p>
+
+          </li>
+
+          <li><p>Une redirection de descripteurs, de l'une des formes
+          suivantes&nbsp;:</p>
+
+            <pre><i>destination</i>&lt;&amp;<i>source</i>-
+<i>destination</i>&gt;&amp;<i>source</i>-</pre>
+
+            <p>Le numéro <tt><i>destination</i></tt> (optionnel) est
+            le descripteur cible de la redirection. Le numéro
+            <tt><i>source</i></tt> est optionnel, ainsi que le signe
+            <tt>-</tt> final, mais l'un des deux au moins doit être
+            présent.</p>
+
+            <p>L'effet de cette redirection est le suivant&nbsp;:</p>
+
+            <ol>
+
+              <li><p>Le descripteur <tt><i>destination</i></tt>
+              (optionnel) est fermé s'il est ouvert. Si ce descripteur
+              n'est pas présent, le descripteur par défaut dépend de
+              l'opérateur&nbsp;: c'est 0 pour <tt>&lt;&amp;</tt>, et 1
+              pour <tt>&gt;&amp;</tt>.</p></li>
+
+              <li><p>Le descripteur <tt><i>source</i></tt> (si présent)
+              est dupliqué dans <tt><i>destination</i></tt>. Le
+              descripteur <tt><i>source</i></tt> doit être ouvert dans
+              le sens indiqué par l'opérateur&nbsp;: en lecture si
+              <tt>&lt;&amp;</tt>, en écriture si
+              <tt>&gt;&amp;</tt>.</p></li>
+
+              <li><p>Si le signe <tt>-</tt> final est présent, le
+              descripteur <tt><i>source</i></tt> est fermé après
+              duplication.</p></li>
+
+            </ol>
+
+            <p>Le manuel de <tt>bash(1)</tt> est explicite sur le rôle
+            de ces opérateurs. Voici quelques exemples&nbsp;:</p>
+
+            <ul>
+
+              <li><pre>2>&amp;1</pre>
+
+                <p>Le plus fréquent&nbsp;: le descripteur 2, qui doit
+                être ouvert en écriture, est dupliqué sur le
+                descripteur 1. C'est une façon d'avoir l'entrée
+                standard et la sortie standard sur le même
+                fichier.</p>
+
+              </li>
+
+              <li><pre>0&lt;&amp;3-</pre>
+
+                <p>Le descripteur 0 est fermé s'il est ouvert. Le
+                descripteur 3, qui doit être ouvert en lecture, est
+                dupliqué dans le descripteur 0. Le descripteur 3 est
+                fermé. Notez qu'ici le 0 pourrait être omis sans
+                changer le sens de la redirection.</p>
+
+              </li>
+
+              <li><pre>0&lt;&amp;3</pre>
+
+                <p>La même chose que ci-dessus, mais le descripteur 3
+                n'est pas fermé à la fin de la redirection.</p>
+
+              </li>
+
+              <li><pre>5&gt;&amp;-</pre>
+
+                <p>Le desripteur 5, qui doit être ouvert en écriture,
+                est fermé.</p>
+
+              </li>
+
+            </ul>
+
+        </ul>
+
+        <p>Si une commande simple est suivie de plusieurs
+        redirections, celles-ci sont réalisées dans l'ordre
+        d'apparition. Le manuel de <tt>bash(1)</tt> explique
+        pourquoi la suite</p>
+
+        <pre>... &gt; sortie 2&gt;&amp;1</pre>
+
+        <p>n'est pas équivalente à&nbsp;:</p>
+
+        <pre>... 2&gt;&amp;1 &gt; sortie</pre>
+
+        <p>Il se peut aussi que la suite de redirections soit
+        incohérente. Dans ce cas, il faut afficher un message d'erreur
+        et ne pas effectuer la redirection.</p>
+
+      </dd>
+
+
+      <dt>Un <span class="def">pipeline</span></dt>
+
+      <dd><p>C'est une suite de commandes redirigées séparées par le
+      caractère <span class="char">|</span> (dit <em>pipe</em>). Par
+      exemple, le pipeline&nbsp;:</p>
+
+        <pre>cat -n &lt; entree | grep toto | sort &gt; sortie</pre>
+
+        <p>est un pipeline contenant les trois commandes
+        redirigées&nbsp;:</p>
+
+        <ol>
+
+          <li><p><span class="code">cat -n &lt; entree</span></p></li>
+          <li><p><span class="code">grep toto</span></p></li>
+          <li><p><span class="code">sort &gt; sortie</span></p></li>
+
+        </ol>
+
+      </dd>
+
+
+      <dt>Une <span class="def">commande conditionnelle</span></dt>
+
+      <dd><p>C'est une suite de pipelines, séparés par un des deux
+      <span class="def">opérateurs de séquencement</span> (<span
+      class="char">&amp;&amp;</span> et <span
+      class="char">||</span>).Par exemple&nbsp;:</p>
+
+        <pre>ps ax | grep toto &amp;&amp; ls</pre>
+
+        <p>est une commande conditionnelle comportant deux pipelines,
+        le second pipeline contenant une seule commande redirigée, qui
+        d'ailleurs ne comporte pas de redirection et se restreint donc
+        à une liste de mots, qui en plus ne contient qu'un seul
+        mot.</p>
+
+        <p>(Nous reviendrons plus loin sur ce genre de formes
+        «&nbsp;dégénérées&nbsp;».)</p>
+
+      </dd>
+
+
+      <dt>Une <span class="def">séquence</span></dt>
+
+      <dd><p>Une séquence est une suite de commandes conditionnelles
+      suivie chacune d'un opérateur de séquencement (soit <span
+      class="char">;</span> soit <span class="char">&amp;</span>). Par
+      exemple&nbsp;:</p>
+
+        <pre>gcc -S f1.c &amp;&amp; gcc -S f2.c ; nedit f1.s &amp; nedit f2.s &amp;</pre>
+
+        <p>est une séquence de trois commandes conditionnelles.</p>
+
+        <p>Notez que si la dernière commande conditionnelle n'est pas
+        suivie par un opérateur de séquencement, l'opérateur <span
+        class="char">;</span> est implicitement inséré.
+        Ainsi&nbsp;:</p>
+
+        <pre>ls ; ps</pre>
+
+        <p>est strictement équivalent à&nbsp;:</p>
+
+        <pre>ls ; ps ;</pre>
+
+      </dd>
+
+
+      <dt>Une <span class="def">commande complète</span></dt>
+
+      <dd><p>Une commande complète n'est rien d'autre qu'une
+      séquence.</p></dd>
+
+    </dl>
+
+    <!--
+    <p>Il est important de bien comprendre ce que signifie une
+    commande comme celle donnée dans le dernier exemple. Voici une
+    décomposition de cette commande, dans laquelle nous utilisons des
+    accolades et des passages à la ligne pour identifier la structure
+    de la commande complète&nbsp;:</p>
+
+    <pre>{
+  { { ps ax } | { { grep toto } > ps.txt } }
+  &amp;&amp;
+  { { ls -l } | { grep core } }
+  &amp;&amp;
+  { df . }
+} &amp;</pre>
+
+    <p>Bien sûr, les accolades ne sont là que pour illustrer le
+    regroupement, et n'ont pas de rôle particulier dans notre
+    shell.</p>
+-->
+
+    <h2>Commandes dégénérées</h2>
+
+    <p>Le but du mini-shell est d'interpréter une commande complète. 
+    Il se peut toutefois que cette commande soit relativement simple. 
+    Voici un exemple extrême. La commande complète est&nbsp;:</p>
+
+    <pre>ls</pre>
+
+    <p>Voici pourquoi on peut dire que cette commande est une commande
+    complète&nbsp;:</p>
+
+    <ul>
+
+      <li><p>La commande complète contient une séquence implicitement
+      suivie de l'opérateur <span class="char">;</span></p></li>
+
+      <li><p>La séquence comporte une seule commande conditionnelle.</p></li>
+
+      <li><p>La commande conditionnelle comporte un seul pipeline.</p></li>
+
+      <li><p>Le pipeline comporte une seule commande redirigée.</p></li>
+
+      <li><p>La commande redirigée comporte une liste de mots mais pas de
+      redirection.</p></li>
+
+      <li><p>La liste de mots contient un seul mot.</p></li>
+
+    </ul>
+
+    <p>D'autre part, notre min-shell doit également être capable
+    d'exécuter des choses bien plus compliquées. Par
+    exemple&nbsp;:</p>
+
+    <pre>ps aux | grep toto &amp;&amp; grep titi &lt; entree | sort || echo "probleme" ; ls -lt &amp;</pre> 
+
+    <p>(une séquence de deux conditionnelles dont la première comporte
+    trois pipelines, etc).</p>
+
+    <p>Donc, la notion de commande complète représente tout ce que
+    peut exécuter notre mini-shell. Le but du projet est d'écrire une
+    fonction qui prend en paramètre une commande complète, et qui en
+    exécute les différents éléments.</p>
+
+
+    <h2>Notion de sous-shell</h2>
+
+    <p>Nous avons brièvement évoqué ci-dessus la notion de sous-shell.
+    Nous avons dit qu'une commande simple pouvait être soit une liste
+    de mots, soit une commande complète entre parenthèses. On voit
+    l'intérêt de cette notion dans l'exemple suivant. Supposons que
+    l'on veuille exécuter une séquence d'opérations et rediriger la
+    sortie de l'ensemble. Une première tentative pourrait
+    être&nbsp;:</p>
+
+    <pre>cat prog.h ; cat prog.c > brouillon.txt</pre>
+
+    <p>Le but serait d'obtenir dans le fichier <tt>brouillon.txt</tt>
+    le contenu des deux fichiers <tt>prog.h</tt> et <tt>prog.c</tt>.
+    Malheureusement cela ne fonctionne pas, car la redirection ne
+    concerne que la deuxième commande de la séquence. La solution est
+    d'écrire&nbsp;:</p>
+
+    <pre>( cat prog.h ; cat prog.c ) > brouillon.txt</pre>
+
+    <p>Dans ce cas, la séquence est exécutée dans un sous-shell, et
+    c'est la sortie de ce sous-shell qui est redirigée vers le
+    fichier. On obtient donc bien le résultat souhaité.</p>
+
+    <p>Notez que le fait de dire qu'une commande simple peut être une
+    commande complète placée entre parenthèses introduit une
+    circularité dans la structure de données utilisées (une commande
+    complète est une séquence etc. qui contient une commande simple
+    qui peut contenir une commande complète).</p>
+
+
+    <hr>
+    <address><a href="mailto:alain@dpt-info.u-strasbg.fr">Alain Ketterlin</a></address>
+<!-- Created: Fri Dec  3 15:27:09 CET 2004 -->
+<!-- hhmts start -->
+Last modified: Wed Dec  8 15:00:36 CET 2004
+<!-- hhmts end -->
+  </body>
+</html>

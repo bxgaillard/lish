@@ -1,0 +1,241 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>Bibliothèque pour la représentation des commandes</title>
+    <style type="text/css">
+      BODY {
+      background-color: white;
+      color: black;
+      margin: 3em;
+      }
+      H1, H2, H3, H4, H5, H6 {
+      font-family: sans-serif;
+      }
+      H1 {
+      text-align: center;
+      }
+      PRE.api {
+      background-color: #ff9999;
+      }
+      PRE.exemple {
+      background-color: #99ff99;
+      }
+      PRE.exemple EM {
+      font-style: normal;
+      font-weight: bold;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Bibliothèque pour la représentation des commandes</h1>
+
+    <p>Le premier problème est de représenter en mémoire les commandes
+    acceptées par notre shell. Nous avons vu (dans la partie <a
+    href="syntaxe.html">Syntaxe</a>) que ces commandes avaient une
+    structure bien définie. D'autre part, le but de notre mini-shell
+    est de lire une commande, d'en comprendre la structure, de
+    l'exécuter, puis de recommencer.</p>
+
+    <p>Afin de vous simplifier le travail, nous vous fournissons tout
+    ce qui concerne la transformation d'une chaine de caractères
+    (tapée par l'utilisateur) en une structure de données qui
+    représente correctement les différents niveaux de commandes
+    (séquences, pipelines, etc).</p>
+
+    <p>L'ensemble du code utilisable se trouve dans une bibliothèque
+    appelée <tt>chelle.a</tt>. <em>Vous n'avez pas besoin de
+    comprendre tout ce code</em>, il vous suffit de savoir comment
+    l'utiliser. Cette page vous explique ce que vous pouvez faire.</p>
+
+
+    <h2>Structures de données</h2>
+
+    <p>Le fichier <tt>commande.h</tt> contient la définition de toutes
+    les structures nécessaires pour représenter une commande
+    quelconque de notre mini-shell.</p>
+
+    <p>Le plus simple est que vous lisiez le fichier
+    <tt>commande.h</tt>, en même temps que la description de la <a
+    href="syntaxe.html">syntaxe</a>. Vous pouvez aussi utiliser le
+    programme d'exemple fourni avec un debugger visuel (par exemple
+    <tt>ddd</tt>) pour explorer les structures de données.</p>
+
+    <p>Voici néanmoins quelques exemples, réalisé avec un debugger
+    visuel (ddd). Dans chaque cas, vous voyez les structures
+    employées&nbsp;:</p>
+
+    <ul>
+
+      <li><p><tt>ps aux | grep toto | sort</tt></p>
+
+        <p><img src="triple-pipe.png"></p>
+
+      </li>
+
+      <li><p><tt>ps && ls && date</tt></p>
+
+        <p><img src="triple-cond.png"></p>
+
+      </li>
+
+      <li><p><tt>( cat prog.h ; cat prog.c ) > brouillon.txt</tt></p>
+
+        <p>(Dans ce cas, la totalité de la structure n'est montrée.)
+
+        <p><img src="sub-shell.png"></p>
+
+      </li>
+
+    </ul>
+
+    <p>On pourrait multiplier les exemples. Libre à vous d'examiner
+    ces structures, soit sous forme textuelle (voir l'exemple
+    ci-dessous) soit en utilisant un debugger comme nous l'avons fait
+    ici.</p>
+
+    <h2>Analyse d'une chaine de caractères</h2>
+
+    <p>La première difficulté consiste à lire une chaîne de caractères
+    et à en comprendre les différents constituants, c'est-à-dire à
+    interpréter le texte en termes de commandes simples, de pipelines,
+    etc. La fonction&nbsp;:</p>
+
+    <pre class="api">Commande * parse_commande(char * str);</pre>
+
+    <p>fait cela pour vous. Il suffit de lui fournir une chaîne de
+    caractères, et elle renvoie un pointeur sur une structure
+    <tt>Commande</tt> contenant les différents éléments de la
+    commande. Si la syntaxe de la commande n'est pas correcte, cette
+    fonction renvoie <tt>NULL</tt>.</p>
+
+    <p>Puisque la structure renvoyée par <tt>parse_commande()</tt> est
+    allouée dynamiquement, il faut absolument libérer la mémoire
+    utilisée après usage. La fonction&nbsp;:</p>
+
+    <pre class="api">void free_commande(Commande * c);</pre>
+
+    <p>réalise exactement cela. Il est bien sûr obligatoire de
+    l'appeler après avoir utilisé une structure <tt>Commande</tt>.</p>
+
+    <p>Pour vous aider à comprendre de quoi il s'agit, il existe
+    également une fonction&nbsp;:</p>
+
+    <pre class="api">void dump_commande(Commande * c, FILE * f);</pre>
+
+    <p>qui affiche sous forme de texte dans le fichier <tt>f</tt> une
+    représentation arborescente de la structure construite. Cela vous
+    permet de voir comment la fonction <tt>parse_commande()</tt> a
+    compris le texte tapé par l'utilisateur.</p>
+
+
+    <h2>Gestion de l'historique</h2>
+
+    <p>Notre mini-shell doit gérer un historique des commandes. Il se
+    trouve que l'accès à l'historique peut se faire de trois
+    façons&nbsp;: soit pour accéder à la dernière commande, soit pour
+    accéder à un commande par son numéro dans l'historique, soit pour
+    accéder à une commande en donnant ses premières lettres. Il faut
+    cependant être conscient que cet accès ce fait <em>pendant</em>
+    que la fonction <tt>parse_commande()</tt> fait son travail. Pour
+    ne pas avoir à modifier cette fonction, celle-ci est définie de
+    façon à appeler des fonctions de gestion de l'historique. En voici
+    la liste.</p>
+
+    <pre class="api">char * historique_precedente();</pre>
+
+    <p>Cette première fonction est appelée chaque fois que le mot
+    <tt>!!</tt> est lu. Son rôle est de renvoyer la dernière commande
+    entrée dans l'historique, sous la forme d'une chaîne de
+    caractères.</p>
+
+    <pre class="api">char * historique_numero(int);</pre>
+
+    <p>Cette deuxième fonction est appelée chaque fois qu'un mot de la
+    forme <tt>!<i>entier</i></tt> est lu (par exemple <tt>!5</tt>). 
+    Son rôle est de renvoyer la commande de l'historique qui a le
+    numéro donné, sous la forme d'une chaîne de caractères.</p>
+
+    <pre class="api">char * historique_chaine(char *);</pre>
+
+    <p>Cette troisième et dernière fonction est appelée chaque fois
+    qu'un mot de la forme <tt>!<i>chaine</i></tt> est lu (par exemple
+    <tt>!gcc</tt>). Son rôle est de renvoyer la dernière commande de
+    l'historique qui commence par <tt><i>chaine</i></tt>, sous la
+    forme d'une chaîne de caractères.</p>
+
+    <p>Vous devez écrire ces fonctions pour que votre programme puisse
+    se compiler. Voyez l'exemple ci-dessous pour un exemple de
+    définition temporaire.</p>
+
+    <p><strong>Attention&nbsp;:</strong> la chaîne de caractères
+    renvoyée par ces trois fonctions <em>doit</em> être allouée
+    dynamiquement, et <em>sera libérée</em> automatiquement après
+    utilisation.</p>
+
+
+    <h2>Un exemple</h2>
+
+    <p>Voici à titre d'exemple un simple programme appelé
+    <tt>chelle.c</tt>, que vous trouverez avec le code de la
+    bibliothèque.</p>
+
+    <pre class="exemple">
+#include &lt;stdio.h&gt;
+<em>#include "commande.h"</em>
+
+/* Trois définitions stupides pour gérer l'historique */
+
+char * <em>historique_precedente</em>()
+{
+    char * s = calloc(strlen("historique precedente")+1,sizeof(char));
+    strcpy(s,"historique precedente");
+    return s;
+}
+char * <em>historique_numero</em>(int i)
+{
+    char * s = calloc(strlen("historique numero")+12,sizeof(char));
+    sprintf(s,"historique numero %d",i);
+    return s;
+}
+char * <em>historique_chaine</em>(const char * c)
+{
+    char * s = calloc(strlen("historique chaine")+strlen(c)+2,sizeof(char));
+    sprintf(s,"historique chaine %s",c);
+    return s;
+}
+
+/* Un programme principal */
+
+int main()
+{
+    char buffer[256];
+    while ( fgets(buffer,256,stdin) != NULL )
+    {
+        <em>Commande</em> * c;
+        if ( (c=<em>parse_commande</em>(buffer)) != NULL )
+        {
+            <em>dump_commande</em>(c,stdout);
+            <em>free_commande</em>(c);
+        }
+    }
+    return 0;
+}</pre>
+
+    <p>Bien sûr le but du projet est de remplacer l'appel à
+    <tt>dump_commande()</tt> par un appel d'une fonction
+    <tt>run_commande()</tt> que vous écrirez, et de définir
+    correctement les trois fonctions de gestion de l'historique. Vous
+    n'avez rien d'autre à faire.</p>
+
+
+
+
+    <hr>
+    <address><a href="mailto:alain@dpt-info.u-strasbg.fr">Alain Ketterlin</a></address>
+<!-- Created: Fri Dec  3 16:43:53 CET 2004 -->
+<!-- hhmts start -->
+Last modified: Thu Dec  9 10:47:12 CET 2004
+<!-- hhmts end -->
+  </body>
+</html>

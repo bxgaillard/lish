@@ -1,0 +1,6 @@
+INSTALLING LISH
+
+
+List cannot be automatically installed.  It is just single executable file.  If
+you wish to install it, simply copy the `lish' file to a directory which is
+present in your $PATH.
